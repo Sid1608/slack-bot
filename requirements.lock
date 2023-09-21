@@ -1,0 +1,5 @@
+ipython
+slackclient
+flask
+slackeventsapi
+python-dotenv

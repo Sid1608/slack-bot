@@ -1,0 +1,7 @@
+sqlify-venv*
+.env
+__pycache__/
+*.py[cod]
+*.mo
+*.ipyn
+._*
