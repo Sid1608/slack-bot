@@ -5,25 +5,16 @@ from dotenv import load_dotenv
 from flask import Flask, request, Response
 from slackeventsapi import SlackEventAdapter
 import pprint
+import constants
+from utils import WelcomeMessage
 printer=pprint.PrettyPrinter()
 sys.path.append(os.getcwd())
 load_dotenv()
 SLACK_TOKEN: str = os.getenv("SLACK_TOKEN")
 SIGNING_SECRET: str = os.getenv("SIGNING_SECRET")
 
-
-app=Flask(__name__)
-slack_event_adapter=SlackEventAdapter(SIGNING_SECRET,'/slack/events',app)
-
-
-client=slack.WebClient(token=SLACK_TOKEN)
-BOT_ID=client.api_call('auth.test')["user_id"]
-
-client.chat_postMessage(channel="#test-bot",text="hello welcome to sqlify")
 message_counts={}
 welcome_messages={}
-
-BAD_WORDS=['bad','No','idiot','stupid']
 
 SCHEDULED_MESSAGES = [
     {'text': 'hey', 'post_at': (
@@ -31,45 +22,12 @@ SCHEDULED_MESSAGES = [
     {'text': 'ninja!', 'post_at': (
         datetime.now() + timedelta(seconds=30)).timestamp(), 'channel': 'C05TNHLAVDF'}
 ]
-class WelcomeMessage:
-    START_TEXT={
-        'type':'section',
-        'text':{
-            'type':"mrkdwn",
-            'text':(
-                'Welcome to this awesome channel! \n\n'
-                '*Get started by completing the tasks!*'
-            )
-        }
-    }
 
-    DIVIDER={
-        'type':'divider'
-    }
-    def __init__(self,channel,user):
-        self.channel=channel
-        self.user=user
-        self.icon_emoji=':robot_face:'
-        self.timestamp=''
-        self.completed=False
-    def get_message(self):
-        return {
-            'ts':self.timestamp,
-            'channel':self.channel,
-            'username':'Welcome Robot!',
-            'icon_emoji':self.icon_emoji,
-            'blocks':[
-                self.START_TEXT,
-                self.DIVIDER,
-                self._get_reaction_task()
-            ]
-        }
-    def _get_reaction_task(self):
-        checkmark=':white_check_mark:'
-        if not self.completed:
-            checkmark=':white_large_square:'
-        text=f'{checkmark} *React to this message!*'
-        return {'type':'section','text':{'type':'mrkdwn','text':text}}
+app=Flask(__name__)
+slack_event_adapter=SlackEventAdapter(SIGNING_SECRET,'/slack/events',app)
+client=slack.WebClient(token=SLACK_TOKEN)
+client.chat_postMessage(channel="#test-bot",text="hello welcome to sqlify")
+BOT_ID=client.api_call('auth.test')["user_id"]
 
 
 def list_scheduled_messages(channel):
@@ -115,7 +73,7 @@ def send_welcome_message(channel,user):
 def check_if_bad_words(message):
     msg=message.lower()
     msg=msg.translate(str.maketrans('','',string.punctuation))
-    return any(word in msg for word in BAD_WORDS)
+    return any(word in msg for word in constants.BAD_WORDS)
 
 @slack_event_adapter.on('message')
 def message(payload):
