@@ -1,8 +1,11 @@
 import slack
 import os,sys,string
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask import Flask, request, Response
 from slackeventsapi import SlackEventAdapter
+import pprint
+printer=pprint.PrettyPrinter()
 sys.path.append(os.getcwd())
 load_dotenv()
 SLACK_TOKEN: str = os.getenv("SLACK_TOKEN")
@@ -21,6 +24,13 @@ message_counts={}
 welcome_messages={}
 
 BAD_WORDS=['bad','No','idiot','stupid']
+
+SCHEDULED_MESSAGES = [
+    {'text': 'hey', 'post_at': (
+        datetime.now() + timedelta(seconds=20)).timestamp(), 'channel': 'C05TNHLAVDF'},
+    {'text': 'ninja!', 'post_at': (
+        datetime.now() + timedelta(seconds=30)).timestamp(), 'channel': 'C05TNHLAVDF'}
+]
 class WelcomeMessage:
     START_TEXT={
         'type':'section',
@@ -60,6 +70,34 @@ class WelcomeMessage:
             checkmark=':white_large_square:'
         text=f'{checkmark} *React to this message!*'
         return {'type':'section','text':{'type':'mrkdwn','text':text}}
+
+
+def list_scheduled_messages(channel):
+    response = client.chat_scheduledMessages_list(channel=channel)
+    messages = response.data.get('scheduled_messages')
+    ids = []
+    for msg in messages:
+        ids.append(msg.get('id'))
+
+    return ids
+
+def schedule_messages(messages):
+    ids = []
+    for msg in messages:
+        response = client.chat_scheduleMessage(
+            channel=msg['channel'], text=msg['text'], post_at=int(msg['post_at'])).data
+        id_ = response.get('scheduled_message_id')
+        ids.append(id_)
+
+    return ids
+
+def delete_scheduled_messages(ids,channel):
+
+    for _id in ids:
+        try:
+            client.chat_deleteScheduledMessage(channel=channel,scheduled_message_id=_id)
+        except Exception as e:
+            print(e)
 
 def send_welcome_message(channel,user):
     if channel not in welcome_messages:
@@ -125,4 +163,7 @@ def message_count():
 
 
 if __name__ == "__main__":
+    schedule_messages(SCHEDULED_MESSAGES)
+    ids=list_scheduled_messages('C05TNHLAVDF')
+    delete_scheduled_messages(ids,'C05TNHLAVDF')
     app.run(debug=True)
